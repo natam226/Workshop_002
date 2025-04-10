@@ -47,12 +47,10 @@ def authenticate_drive(credentials_path=CREDENTIALS_PATH, token_path=TOKEN_PATH)
     return build('drive', 'v3', credentials=creds)
 
 
-def upload_file_to_drive(filepath: str, filename: str = None, folder_id: str = None):
+def upload_file_to_drive(filepath: str, filename: str = None):
     service = authenticate_drive()
 
     file_metadata = {'name': filename or os.path.basename(filepath)}
-    if folder_id:
-        file_metadata['parents'] = [folder_id]
 
     media = MediaFileUpload(filepath, resumable=True)
 

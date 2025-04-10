@@ -23,6 +23,7 @@ from src.transform.transform_spotify import transform_spotify_data
 
 from src.transform.merge import merge_datasets
 from src.load.load import load_to_postgresql
+from src.load.store import upload_file_to_drive
 
 
 # === Configuración del DAG ===
@@ -108,6 +109,10 @@ def task_load():
     load_to_postgresql(df, "data_pipeline")
     logging.info("✅ Datos cargados exitosamente a la base de datos")
 
+def task_store_to_drive():
+    upload_file_to_drive(MERGED_PATH, filename="artistas_merge.csv")
+    logging.info("✅ Archivo subido a Google Drive desde DAG")
+
 # === OPERADORES ===
 
 extract_spotify_op = PythonOperator(task_id='extract_spotify', python_callable=task_extract_spotify, dag=dag)
@@ -120,6 +125,8 @@ transform_api_op = PythonOperator(task_id='transform_api', python_callable=task_
 
 merge_op = PythonOperator(task_id='merge_datasets', python_callable=task_merge, dag=dag)
 load_op = PythonOperator(task_id='load_to_postgres', python_callable=task_load, dag=dag)
+store_op = PythonOperator(task_id='store_to_drive', python_callable=task_store_to_drive, dag=dag)
+
 
 # === DEPENDENCIAS ===
 
@@ -128,3 +135,5 @@ extract_grammy_op >> transform_grammy_op
 extract_api_op >> transform_api_op
 
 [transform_spotify_op, transform_grammy_op, transform_api_op] >> merge_op >> load_op
+
+load_op >> store_op
