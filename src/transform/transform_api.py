@@ -23,7 +23,7 @@ def is_english_filtered(text):
     if award_lang_cache[text] != "en":
         return False
 
-    for palabra in PALABRAS_NO_INGLESES:
+    for palabra in NO_ENGLISH_WORDS:
         if palabra in text_l:
             return False
 
@@ -50,9 +50,9 @@ def transformation_api(df: pd.DataFrame) -> pd.DataFrame:
 
     # Agrupación por artista y consolidación de campos
     df = df.groupby("artist").agg({
-        "country": valor_mas_comun,
-        "death": valor_mas_comun,
-        "gender": valor_mas_comun,
+        "country": most_common_value,
+        "death": most_common_value,
+        "gender": most_common_value,
         "award": lambda x: sorted(set(x))
     }).reset_index()
 

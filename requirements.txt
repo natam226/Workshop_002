@@ -62,10 +62,10 @@ nbformat==5.10.4
 nest-asyncio==1.6.0
 notebook==7.3.3
 notebook_shim==0.2.4
-numpy==2.2.4
+numpy==1.26.4
 overrides==7.7.0
 packaging==24.2
-pandas==2.2.3
+pandas==2.1.4
 pandocfilters==1.5.1
 parso==0.8.4
 pillow==11.1.0
@@ -74,7 +74,6 @@ prometheus_client==0.21.1
 prompt_toolkit==3.0.50
 psutil==7.0.0
 psycopg==3.2.6
-psycopg2==2.9.10
 pure_eval==0.2.3
 pycparser==2.22
 Pygments==2.19.1
@@ -82,8 +81,6 @@ pyparsing==3.2.3
 python-dateutil==2.9.0.post0
 python-json-logger==3.3.0
 pytz==2025.2
-pywin32==310
-pywinpty==2.0.15
 PyYAML==6.0.2
 pyzmq==26.3.0
 referencing==0.36.2

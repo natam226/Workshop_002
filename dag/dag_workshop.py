@@ -14,15 +14,15 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # === Importar funciones ===
 from src.extract.extract_api import extract_api
-from src.extract.extract_grammys import extract_data as extract_grammy
+from src.extract.extract_grammy import extract_data as extract_grammy
 from src.extract.extract_spotify import extract_spotify_data
 
-from src.transform.transform_api import transform_wikidata
-from src.transform.transform_grammys import transform_grammy_data
+from src.transform.transform_api import transformation_api
+from src.transform.transform_grammy import transform_grammy_data
 from src.transform.transform_spotify import transform_spotify_data
 
-from src.transform.merge_datasets import merge_datasets
-from src.load.load import upload_dataframe
+from src.transform.merge import merge_datasets
+from src.load.load import load_to_postgresql
 
 
 # === Configuración del DAG ===
@@ -89,7 +89,7 @@ def task_transform_grammy():
 
 def task_transform_api():
     df = pd.read_csv(API_PATH)
-    df_clean = transform_wikidata(df)
+    df_clean = transformation_api(df)
     df_clean.to_csv(API_PATH, index=False)
     logging.info(f"✅ API transformado en {API_PATH}")
 
@@ -105,7 +105,7 @@ def task_merge():
 # 🚀 LOAD
 def task_load():
     df = pd.read_csv(MERGED_PATH)
-    upload_dataframe(df)
+    load_to_postgresql(df, "data_pipeline")
     logging.info("✅ Datos cargados exitosamente a la base de datos")
 
 # === OPERADORES ===
@@ -123,5 +123,8 @@ load_op = PythonOperator(task_id='load_to_postgres', python_callable=task_load, 
 
 # === DEPENDENCIAS ===
 
-[extract_spotify_op, extract_grammy_op, extract_api_op] >> [transform_spotify_op, transform_grammy_op, transform_api_op]
+extract_spotify_op >> transform_spotify_op
+extract_grammy_op >> transform_grammy_op
+extract_api_op >> transform_api_op
+
 [transform_spotify_op, transform_grammy_op, transform_api_op] >> merge_op >> load_op

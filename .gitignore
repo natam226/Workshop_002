@@ -1,6 +1,4 @@
-#virtual environment
-/venv/
+venv/
 
-#db credentials
 credentials.json
-
+credentialsdb.json
