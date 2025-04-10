@@ -14,7 +14,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
 # Ajusta estas rutas si las quieres pasar directamente como argumentos
-CREDENTIALS_PATH = "credentials.json"
+BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+CREDENTIALS_PATH = os.path.join(BASE_PATH, 'credentialsdrive.json')
 TOKEN_PATH = "token.pickle"
 
 def authenticate_drive(credentials_path=CREDENTIALS_PATH, token_path=TOKEN_PATH):
