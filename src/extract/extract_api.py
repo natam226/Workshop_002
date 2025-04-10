@@ -1,5 +1,4 @@
 import os
-import re
 import time
 import logging
 import pandas as pd
@@ -19,22 +18,20 @@ MAX_QUERY_SIZE = 60000
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
-
 def extract_api() -> pd.DataFrame:
     artistas_unicos = _cargar_y_limpiar_artistas(ARTISTS_CSV)
     resultados = _consultar_wikidata(artistas_unicos)
-    columnas_ordenadas = ["artist", "country", "award", "death", "gender"]
+    columnas_ordenadas = ["artist", "country", "award", "gender", "album_count"]
     return pd.DataFrame(resultados, columns=columnas_ordenadas)
+
 
 def limpiar_nombre(nombre: str) -> str:
     if pd.isna(nombre) or not nombre.strip():
         return None
-    nombre = nombre.replace("\\", "")
-    nombre = nombre.replace('"', '')
-    nombre = nombre.replace("'", "")
-    nombre = nombre.replace("/", " ")
-    nombre = nombre.replace("&", "and")
+    nombre = nombre.replace("\\", "").replace('"', '').replace("'", "")
+    nombre = nombre.replace("/", " ").replace("&", "and")
     return nombre.strip()
+
 
 def _cargar_y_limpiar_artistas(ruta_csv: str) -> list:
     df = pd.read_csv(ruta_csv, header=None, names=["raw"])
@@ -43,20 +40,25 @@ def _cargar_y_limpiar_artistas(ruta_csv: str) -> list:
     logging.info(f"✅ Total artistas únicos: {len(artistas_unicos)}")
     return artistas_unicos
 
+
 def construir_query_sparql(artistas: list) -> str:
     values = "\n".join([f'"{nombre}"@en' for nombre in artistas])
     return f"""
-    SELECT ?artistLabel ?death ?countryLabel ?awardLabel ?genderLabel WHERE {{
+    SELECT ?artistLabel ?countryLabel ?awardLabel ?genderLabel (COUNT(?album) AS ?album_count) WHERE {{
       VALUES ?name {{ {values} }}
       ?artist rdfs:label ?name.
-      ?artist wdt:P166 ?award.
-      ?award rdfs:label ?awardLabel.
+      OPTIONAL {{ ?artist wdt:P166 ?award. }}
       OPTIONAL {{ ?artist wdt:P27 ?country. }}
-      OPTIONAL {{ ?artist wdt:P570 ?death. }}
       OPTIONAL {{ ?artist wdt:P21 ?gender. }}
+      OPTIONAL {{
+        ?album wdt:P31 wd:Q482994.
+        ?album wdt:P175 ?artist.
+      }}
       SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
     }}
+    GROUP BY ?artistLabel ?countryLabel ?awardLabel ?genderLabel
     """
+
 
 def _obtener_datos_wikidata(artistas_batch):
     query = construir_query_sparql(artistas_batch)
@@ -67,6 +69,7 @@ def _obtener_datos_wikidata(artistas_batch):
     except requests.exceptions.RequestException as e:
         logging.error(f"❌ Error en SPARQL: {e}")
         return None
+
 
 def _consultar_wikidata(artistas_unicos: list) -> list:
     resultados = []
@@ -93,8 +96,8 @@ def _consultar_wikidata(artistas_unicos: list) -> list:
                             "artist": row.get("artistLabel", {}).get("value", ""),
                             "country": row.get("countryLabel", {}).get("value", ""),
                             "award": row.get("awardLabel", {}).get("value", "No awards"),
-                            "death": row.get("death", {}).get("value", ""),
-                            "gender": row.get("genderLabel", {}).get("value", "Unknown")
+                            "gender": row.get("genderLabel", {}).get("value", "Unknown"),
+                            "album_count": row.get("album_count", {}).get("value", "0")
                         })
                     batch_success = True
                     i += batch_size
