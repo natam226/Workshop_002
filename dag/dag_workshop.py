@@ -31,7 +31,7 @@ default_args = {
 }
 
 dag = DAG(
-    dag_id='etl_artistas_pipeline',
+    dag_id='etl_pipeline',
     default_args=default_args,
     schedule_interval='@daily',
     catchup=False,
