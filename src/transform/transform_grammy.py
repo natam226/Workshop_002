@@ -1,4 +1,4 @@
-""" Transform grammys data for analysis. """
+""" Transform Grammy data for analysis. """
 
 import pandas as pd
 import logging
@@ -10,169 +10,169 @@ logging.basicConfig(
 )
 
 
-def delete_nominee_nulls(df: pd.DataFrame) -> pd.DataFrame:
-    """Delete rows with null values in the 'nominee' column.
+def drop_null_nominees(df: pd.DataFrame) -> pd.DataFrame:
+    """Drop rows with null values in the 'nominee' column.
 
     Args:
-        df (pd.DataFrame): The DataFrame to modify.
+        df (pd.DataFrame): The DataFrame to process.
 
     Returns:
-        pd.DataFrame: The modified DataFrame with null values removed.
+        pd.DataFrame: Cleaned DataFrame.
     """
-    logging.info("Deleting rows with null values in the 'nominee' column")
+    logging.info("Dropping rows with null values in the 'nominee' column")
     return df.dropna(subset=['nominee'])
 
 
-def delete_nulls_in_nonuseful(df: pd.DataFrame) -> pd.DataFrame:
-    """Delete rows with null values in non-useful categories.
+def drop_nulls_in_nonessential_categories(df: pd.DataFrame) -> pd.DataFrame:
+    """Drop rows with null values in non-essential award categories.
 
     Args:
-        df (pd.DataFrame): The DataFrame to modify.
+        df (pd.DataFrame): The DataFrame to process.
 
     Returns:
-        pd.DataFrame: The modified DataFrame with null values removed.
+        pd.DataFrame: Cleaned DataFrame.
     """
-    logging.info("Deleting rows with null values in non-useful categories")
-    categories_non_useful = [
-    'Best Small Ensemble Performance (With or Without Conductor)',
-    'Best Classical Vocal Performance',
-    'Best Classical Vocal Soloist Performance',
-    'Best Classical Performance - Instrumental Soloist or Soloists (With or Without Orchestra)',
-    'Best Classical Performance - Vocal Soloist',
-    'Best Performance - Instrumental Soloist or Soloists (With or Without Orchestra)',
-    'Best Classical Performance - Vocal Soloist (With or Without Orchestra)'
+    logging.info("Dropping rows with null values in non-essential categories")
+    non_essential_categories = [
+        'Best Small Ensemble Performance (With or Without Conductor)',
+        'Best Classical Vocal Performance',
+        'Best Classical Vocal Soloist Performance',
+        'Best Classical Performance - Instrumental Soloist or Soloists (With or Without Orchestra)',
+        'Best Classical Performance - Vocal Soloist',
+        'Best Performance - Instrumental Soloist or Soloists (With or Without Orchestra)',
+        'Best Classical Performance - Vocal Soloist (With or Without Orchestra)'
     ]
 
-    filter = (
-        (df['artist'].isnull()) &
-        (df['workers'].isnull()) &
-        (df['category'].isin(categories_non_useful))
+    mask = (
+        df['artist'].isnull() &
+        df['workers'].isnull() &
+        df['category'].isin(non_essential_categories)
     )
-    df = df[~filter]
-    return df.reset_index(drop=True)
+    return df[~mask].reset_index(drop=True)
 
 
-def impute_artist(df: pd.DataFrame) -> pd.DataFrame:
-    """Impute missing values in the 'artist' column using the 'nominee' column.
+def impute_artist_from_nominee(df: pd.DataFrame) -> pd.DataFrame:
+    """Fill missing 'artist' values using the 'nominee' column when appropriate.
 
     Args:
-        df (pd.DataFrame): The DataFrame to modify.
+        df (pd.DataFrame): The DataFrame to process.
 
     Returns:
-        pd.DataFrame: The modified DataFrame with missing values imputed.
+        pd.DataFrame: Updated DataFrame.
     """
-    logging.info("Imputing missing values in the 'artist' column")
+    logging.info("Imputing missing 'artist' values using 'nominee'")
     condition = df['artist'].isnull() & df['workers'].isnull()
     df.loc[condition, 'artist'] = df.loc[condition, 'nominee']
     return df.reset_index(drop=True)
 
-def imput_parenthesis_artists(df: pd.DataFrame) -> pd.DataFrame:
-    """Impute missing values in the 'artist' column from the artist in the parenthesis in the 'workers' column.
+
+def impute_artist_from_parenthesis(df: pd.DataFrame) -> pd.DataFrame:
+    """Extract artist names from parentheses in the 'workers' column.
 
     Args:
-        df (pd.DataFrame): The DataFrame to modify.
+        df (pd.DataFrame): The DataFrame to process.
 
     Returns:
-        pd.DataFrame: The modified DataFrame with missing values imputed.
+        pd.DataFrame: Updated DataFrame.
     """
-    logging.info("Imputing missing values in the 'artist' column from the parenthesis")
+    logging.info("Imputing 'artist' values from parentheses in 'workers'")
 
-    def extract_artist(workers):
-        match = re.search(r'\((.*?)\)', workers)
-        if match:
-            return match.group(1)
-        return None
+    def extract_from_parentheses(workers):
+        match = re.search(r'\((.*?)\)', str(workers))
+        return match.group(1) if match else None
 
-    df["artist"] = (df.apply(lambda row:extract_artist(row["workers"])
-            if pd.isna(row["artist"])
-                else row["artist"], axis=1))
+    df["artist"] = df.apply(
+        lambda row: extract_from_parentheses(row["workers"]) if pd.isna(row["artist"]) else row["artist"],
+        axis=1
+    )
     return df.reset_index(drop=True)
 
 
-def impute_artists_role(df: pd.DataFrame) -> pd.DataFrame:
-    """Impute missing values in the 'artist' column using the roles that appear in the 'workers' column.
+def impute_artist_from_roles(df: pd.DataFrame) -> pd.DataFrame:
+    """Impute missing 'artist' values by extracting them from roles in the 'workers' column.
 
     Args:
-        df (pd.DataFrame): The DataFrame to modify.
+        df (pd.DataFrame): The DataFrame to process.
 
     Returns:
-        pd.DataFrame: The modified DataFrame with missing values imputed.
+        pd.DataFrame: Updated DataFrame.
     """
-    logging.info("Imputing missing values in the 'artist' column using the 'role' column")
+    logging.info("Imputing missing 'artist' values using roles in 'workers'")
 
     def extract_artist(workers):
         if pd.isnull(workers):
             return None
-        rule = re.match(r"([^,;]+), (soloist|composer|conductor|artist)", workers)
-        if rule:
-            return rule.group(1).strip()
-        rule = re.match(r"(.+?(Featuring|&| and ).*?)(;|,|$)", workers, re.IGNORECASE)
-        if rule:
-            return rule.group(1).strip()
+        match = re.match(r"([^,;]+), (soloist|composer|conductor|artist)", workers)
+        if match:
+            return match.group(1).strip()
+        match = re.match(r"(.+?(Featuring|&| and ).*?)(;|,|$)", workers, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
         return workers.strip()
+
     df['artist'] = df['artist'].fillna(df['workers'].apply(extract_artist))
     return df.reset_index(drop=True)
 
 
-def replace_values(df: pd.DataFrame) -> pd.DataFrame:
-    """Replace the value of '(Various Artists)' in the artist column for the value 'Various Artists' in the DataFrame.
+def replace_artist_values(df: pd.DataFrame) -> pd.DataFrame:
+    """Replace specific values in the 'artist' column.
 
     Args:
-        df (pd.DataFrame): The DataFrame to modify.
+        df (pd.DataFrame): The DataFrame to process.
 
     Returns:
-        pd.DataFrame: The modified DataFrame with specified values replaced.
+        pd.DataFrame: Updated DataFrame.
     """
-    logging.info("Replacing specific values in the DataFrame")
+    logging.info("Replacing specific artist values")
     df['artist'] = df['artist'].replace({'(Various Artists)': 'Various Artists'})
     return df.reset_index(drop=True)
 
 
-def change_column_name(df: pd.DataFrame) -> pd.DataFrame:
-    """Change the name of a column in the DataFrame.
+def rename_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Rename columns to standardize naming.
 
     Args:
-        df (pd.DataFrame): The DataFrame to modify.
+        df (pd.DataFrame): The DataFrame to process.
 
     Returns:
-        pd.DataFrame: The modified DataFrame with renamed columns.
+        pd.DataFrame: Updated DataFrame.
     """
-    logging.info("Changing column names")
-    df = df.rename(columns={'winner': 'nominated'})
-    return df.reset_index(drop=True)
+    logging.info("Renaming columns")
+    return df.rename(columns={'winner': 'nominated'}).reset_index(drop=True)
 
 
-def delete_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Delete unused columns from the DataFrame.
+def drop_unused_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Drop unnecessary columns from the DataFrame.
+
     Args:
-        df (pd.DataFrame): The DataFrame to modify.
+        df (pd.DataFrame): The DataFrame to process.
 
     Returns:
-        pd.DataFrame: The modified DataFrame with specified columns deleted.
+        pd.DataFrame: Cleaned DataFrame.
     """
-    logging.info("Deleting columns")
-    df = df.drop(columns=['published_at', 'updated_at', 'img', 'workers'], axis=1)
-    return df.reset_index(drop=True)
+    logging.info("Dropping unused columns")
+    return df.drop(columns=['published_at', 'updated_at', 'img', 'workers'], axis=1).reset_index(drop=True)
 
 
 def transform_grammy_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Transform the Grammy data for analysis.
+    """Apply all transformation steps to prepare Grammy data for analysis.
 
     Args:
-        df (pd.DataFrame): The DataFrame to transform.
+        df (pd.DataFrame): Raw Grammy data.
 
     Returns:
-        pd.DataFrame: The transformed DataFrame.
+        pd.DataFrame: Cleaned and transformed data.
     """
-    logging.info("Transforming Grammy data")
+    logging.info("Starting transformation of Grammy data")
 
-    df = delete_nominee_nulls(df)
-    df = delete_nulls_in_nonuseful(df)
-    df = impute_artist(df)
-    df = imput_parenthesis_artists(df)
-    df = impute_artists_role(df)
-    df = replace_values(df)
-    df = change_column_name(df)
-    df = delete_columns(df)
+    df = drop_null_nominees(df)
+    df = drop_nulls_in_nonessential_categories(df)
+    df = impute_artist_from_nominee(df)
+    df = impute_artist_from_parenthesis(df)
+    df = impute_artist_from_roles(df)
+    df = replace_artist_values(df)
+    df = rename_columns(df)
+    df = drop_unused_columns(df)
     df['decade'] = (df['year'] // 10) * 10
+
     return df.reset_index(drop=True)

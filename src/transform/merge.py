@@ -1,10 +1,7 @@
-# merge_datasets.py
-
 import pandas as pd
 import logging
 import re
 from typing import Union
-
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 log = logging.getLogger(__name__)
@@ -21,7 +18,7 @@ def expand_artists_column(df: pd.DataFrame, column: str = "artist") -> pd.DataFr
     Returns:
         pd.DataFrame: DataFrame with one artist per row, normalized to lowercase and stripped of whitespace.
     """
-    log.info(f"🔄 Expanding artists in column '{column}'...")
+    log.info(f"Expanding artists in column '{column}'...")
 
     # Common separators for collaborations
     separators = r';|,|&| Featuring | feat\.| Feat\.| ft\.|/| x '
@@ -47,7 +44,7 @@ def normalize_artist_names(df: pd.DataFrame, column: str = "artist") -> pd.DataF
     Returns:
         pd.DataFrame: Modified DataFrame with normalized artist names.
     """
-    log.info(f"🧼 Normalizing artist names in column '{column}'...")
+    log.info(f"Normalizing artist names in column '{column}'...")
     df[column] = df[column].astype(str).str.strip().str.lower()
     return df
 
@@ -63,22 +60,18 @@ def merge_datasets(
     Args:
         df_spotify (pd.DataFrame): Preprocessed Spotify dataset.
         df_grammy (pd.DataFrame): Preprocessed Grammy dataset.
-        df_wikidata (pd.DataFrame): Preprocessed Wikidata dataset.
+        df_api (pd.DataFrame): Preprocessed Wikidata dataset.
 
     Returns:
         pd.DataFrame: Final merged DataFrame without duplicates or null values.
     """
-    log.info("🚀 Starting merge of Spotify, Grammy, and Wikidata datasets...")
-
+    log.info("Starting merge of Spotify, Grammy, and Wikidata datasets...")
 
     df_spotify_exp = expand_artists_column(df_spotify, "artists").rename(columns={"artists": "artist"})
     df_grammy_exp = expand_artists_column(df_grammy, "artist")
-
-
     df_api = normalize_artist_names(df_api, "artist")
 
-
-    log.info("🔗 Merging Spotify with Grammy data...")
+    log.info("Merging Spotify with Grammy data...")
     merged_spotify_grammy = pd.merge(
         df_spotify_exp,
         df_grammy_exp,
@@ -87,7 +80,7 @@ def merge_datasets(
         suffixes=('', '_grammy')
     )
 
-    log.info("🔗 Merging result with Wikidata data...")
+    log.info("Merging result with Wikidata data...")
     final_merged = pd.merge(
         merged_spotify_grammy,
         df_api,
@@ -99,5 +92,5 @@ def merge_datasets(
     final_merged = final_merged.drop_duplicates(subset=['track_id', 'artist'], keep='first')
     final_merged = final_merged.dropna().reset_index(drop=True)
 
-    log.info(f"✅ Merge completed: {len(final_merged)} rows returned.")
+    log.info(f"Merge completed: {len(final_merged)} rows returned.")
     return final_merged

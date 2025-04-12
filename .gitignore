@@ -12,7 +12,7 @@ credentialsdrive.json
 *.pyd
 
 # carpeta temporal
-**/datatemp/
+data_temp/
 
 # Archivos generados por Airflow
 airflow/airflow.db
